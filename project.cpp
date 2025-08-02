@@ -49,6 +49,16 @@ struct Node{
 		parent = newParent;
 	}
 
+	void remove(Node* child){
+		int id = child->point.id;
+		for(int i=0 ; i<children.size() ; i++){
+			if(children[i]->point.id == id){
+				children.erase(children.begin() + i);
+				break;
+			}
+		}
+	}
+
 
 /*	bool operator==(const Node& other) const {
 		bool res = true;
@@ -62,23 +72,35 @@ struct Node{
 		return res;
 	}*/
 
-	bool operator==(const Node& other) const {
-		return point == other.point;
-	}
+    bool operator==(const Node& other) const {
+        return point.id == other.point.id; 
+    }
 
+};
+
+struct NodeComparator {
+    bool operator()(const Node* lhs, const Node* rhs) const {
+        return lhs->point.id < rhs->point.id;
+    }
 };
 
 
 struct BJRTree{
 	Node* root;
-	set<Node*> exists;
+	set<Node*, NodeComparator> exists;
 	
 	bool doesPointExist(int id){
-		Node* deletingNode = new Node();
-        Point deletingPoint;
-        deletingPoint.id = id;
-		deletingNode->point = deletingPoint;
-		return exists.count(deletingNode) > 0;
+		Node* searchNode = new Node();
+        Point searchPoint;
+        searchPoint.id = id;
+		searchNode->point = searchPoint;
+
+		auto it = exists.find(searchNode);
+		if (it != exists.end()) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	void inject(Node* root, Node* newNode){
@@ -91,15 +113,18 @@ struct BJRTree{
 				return;
 			}
 		}
-
+		
 		root->addChild(newNode);
 		newNode->changeParent(root);
 		currentNode = nullptr;
 		
 		for(int i=0 ; i<children.size() ; i++){
+			currentNode = children[i];
+
 			if(newNode->point.dominate(currentNode->point)){
 				currentNode->changeParent(newNode);
 				newNode->addChild(currentNode);
+				root->remove(currentNode);
 			}
 		}
 	
@@ -137,6 +162,7 @@ struct BJRTree{
 };
 
 int main(){
+	cout << "program started!" << endl;
 	ifstream infoRead("small.setup");
 	string info;
 	int dim;
@@ -151,11 +177,10 @@ int main(){
 
 	ss.clear();
 	infoRead.close();
-	ifstream inTime("small.times");
 	ifstream fin("small.input");
-	if(!fin.is_open()){
-		cout << "failed";
-	}
+	ifstream inTime("small.times");
+
+
 	int id = 0;
 	vector<string> skyline(timeSteps);
 	int start, end;
@@ -179,11 +204,13 @@ int main(){
 			start = stoi(strStart);
 			end = stoi(strEnd);
 
+			
 			if(time >= start && time <= end ){
 				if(myTree.doesPointExist(id)){
 					id++;
 					continue;
 				} else{
+
 					for(int i=0 ; i<id ; i++){
 						getline(fin, coordinates);
 					}
@@ -192,20 +219,17 @@ int main(){
                     ss.str(coordinates);
                     Point point;
 					point.id = id;
-
 					for(int i=0 ; i<dim ; i++){
                         ss >> temp;
           				point.values.push_back(stoi(temp));
                     }
-
 					Node* newNode = new Node();
 					newNode->point = point;
 					myTree.inject(root, newNode);
-					myTree.exists.insert(newNode);    
+					myTree.exists.insert(newNode);
     
                 }
-            }   
-			else{
+            } else{
 	            if(time < start){
                     break;              			
 				}
@@ -214,14 +238,13 @@ int main(){
 					myTree.eject(deletingNode);
 				}
 			}
-
 			id++;
         }
-		
+
 		vector<Node*> skylinePoints = myTree.root->children;
 		string skylineStr = "";
 		for(int i=0 ; i<skylinePoints.size() ; i++){
-			skylineStr += ""+to_string(skylinePoints[i]->point.id);
+			skylineStr += " "+to_string(skylinePoints[i]->point.id);
 		}
 		skyline[time] = skylineStr;
 
@@ -231,25 +254,9 @@ int main(){
 		//todo clear reading buffers
 	}
 
-	for(int i=0 ; i<timeSteps ; i++){
-		cout << skyline[i];
-	}
+	cout << skyline[3] << endl;
+	cout << skyline[4] << endl;
+	cout << "end";
 
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
