@@ -1,6 +1,7 @@
 #ifndef BJR_TREE_HPP
 #define BJR_TREE_HPP
 
+#include <cmath>
 #include <vector>
 #include <set>
 #include <string>
@@ -29,6 +30,7 @@ struct Point {
 };
 
 struct Node {
+	bool isRoot = false;
     Node* parent;
     vector<Node*> children;
     Point point;
@@ -67,6 +69,9 @@ struct NodeComparator {
 struct BJRTree {
     Node* root;
     set<Node*, NodeComparator> exists;
+	int depth = 0;
+    bool lazy = false;
+
 
     bool doesPointExist(int id) {
         for (auto node : exists) {
@@ -75,6 +80,54 @@ struct BJRTree {
         }
         return false;
     }
+
+    void eject(Node* node) {
+        Node* parent = node->parent;
+        vector<Node*> children = node->children;
+
+        vector<Node*>& siblings = parent->children;
+        for (int i = 0; i < siblings.size(); i++) {
+            if (siblings[i] == node) {
+                siblings.erase(siblings.begin() + i);
+                break;
+            }
+        }
+
+        for (int i = 0; i < children.size(); i++) {
+            if(lazy){
+				lazyInject(parent, children[i]);
+			}else{	
+				inject(parent, children[i]);
+			}
+
+        }
+
+        exists.erase(node);
+    }
+	
+	int Depth(Node* node){
+		int res = 0;
+		Node* currentNode = node;
+		while(!currentNode->isRoot){
+			currentNode = currentNode->parent;
+			res++;
+		}
+		return res;
+	}
+
+	int Desc(Node* node){
+		if(node->children.empty()){
+			return 0;
+		}
+
+		int res = 0;
+		res += node->children.size();
+		for(int i=0 ; i<node->children.size() ; i++){
+			res += Desc(node->children[i]);
+		}
+
+		return res;
+	}
 
     void inject(Node* root, Node* newNode) {
         vector<Node*> children = root->children;
@@ -101,24 +154,48 @@ struct BJRTree {
         }
     }
 
-    void eject(Node* node) {
-        Node* parent = node->parent;
-        vector<Node*> children = node->children;
+	void lazyInject(Node* root, Node* newNode){
+        
+		if(root->isRoot || Depth(root) < depth){
+			vector<Node*> children = root->children;
+			float g = INFINITY;
+			Node* chosenNode = nullptr;
+			for(auto child : children){
+                int d = Desc(child);
+				if(child->point.dominate(newNode->point) && d < g){
+					chosenNode = child;
+					g = d;
+				}
+			}
 
-        vector<Node*>& siblings = parent->children;
-        for (int i = 0; i < siblings.size(); i++) {
-            if (siblings[i] == node) {
-                siblings.erase(siblings.begin() + i);
-                break;
+            if (chosenNode != nullptr) {
+                lazyInject(chosenNode, newNode);
+                return;
+            } else {
+                root->children.push_back(newNode);
+                newNode->changeParent(root);
+
+                if (root->isRoot || Depth(root) < depth) {
+                    vector<Node*> toReparent;
+                    for (auto child : root->children) {
+                        if (newNode->point.dominate(child->point)) {
+                            toReparent.push_back(child);
+                        }
+                    }
+
+                    for (auto child : toReparent) {
+                        newNode->addChild(child);
+                        child->parent = newNode;
+                        root->remove(child);
+                    }
+                }
             }
-        }
 
-        for (int i = 0; i < children.size(); i++) {
-            inject(parent, children[i]);
-        }
+		}
+    
+	}
 
-        exists.erase(node);
-    }
+
 
     Node* findNodeById(int id) {
         for (auto node : exists) {

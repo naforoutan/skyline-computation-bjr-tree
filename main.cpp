@@ -1,9 +1,13 @@
+#include <cmath>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <vector>
 #include <string>
 #include "modules.hpp"
+
+#include <string>
+#include <cctype> 
 using namespace std;
 
 vector<string> readData(string address) {
@@ -16,6 +20,22 @@ vector<string> readData(string address) {
     fin.close();
     return content;
 }
+
+
+string trim(const std::string& str) {
+    size_t first = 0;
+    while (first < str.size() && std::isspace(str[first])) {
+        ++first;
+    }
+
+    size_t last = str.size();
+    while (last > first && std::isspace(str[last - 1])) {
+        --last;
+    }
+
+    return str.substr(first, last - first);
+}
+
 
 int main() {
     cout << "program started!" << endl;
@@ -37,9 +57,12 @@ int main() {
     vector<string> skyline(timeSteps);
     int start, end;
     string strStart, strEnd, range, coordinates;
-    Node* root = new Node();
-    BJRTree myTree;
+	Node* root = new Node();
+    root->isRoot = true;
+	BJRTree myTree;
     myTree.root = root;
+    myTree.depth = 10;
+    myTree.lazy = true;
     string temp;
 
     for (int time = 0; time < timeSteps; time++) {
@@ -68,7 +91,13 @@ int main() {
                     }
                     Node* newNode = new Node();
                     newNode->point = point;
-                    myTree.inject(root, newNode);
+                    
+                    if(myTree.lazy){
+                        myTree.lazyInject(root, newNode);
+                    } else{
+                        myTree.inject(root, newNode);
+                       
+                    }
                     myTree.exists.insert(newNode);
                 }
             } else {
@@ -88,14 +117,30 @@ int main() {
 
         string skylineStr = "";
         for (int i = 0; i < skylinePoints.size(); i++) {
-            skylineStr += " " + to_string(skylinePoints[i]->point.id);
+            if(i==0){
+                skylineStr += "" + to_string(skylinePoints[i]->point.id);
+            } else{
+                skylineStr += " " + to_string(skylinePoints[i]->point.id);
+            }
         }
         skyline[time] = skylineStr;
     }
 
+    ifstream ref("small.refout");
+    string check;
+    int errors=0;
+
     for (int i = 0; i < skyline.size(); i++) {
-        cout << i + 1 << ") " << skyline[i] << endl;
+        getline(ref, check);
+        if(trim(check) !=  trim(skyline[i])){
+            cout << "error" << endl;
+            cout << "sky " << i << ": " << skyline[i] << endl;
+            cout << "che " << i << ": " << check << endl << endl;
+            errors++;
+        }
     }
 
-    cout << "program ended" << endl;
+    float error_rate = errors/skyline.size()*100;
+    printf("erro rate: %.2f%%\n", error_rate);
+    cout << "program finished" << endl;
 }
