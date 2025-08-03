@@ -4,6 +4,7 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <algorithm>
 using namespace std;
 
 
@@ -90,18 +91,13 @@ struct BJRTree{
 	set<Node*, NodeComparator> exists;
 	
 	bool doesPointExist(int id){
-		Node* searchNode = new Node();
-        Point searchPoint;
-        searchPoint.id = id;
-		searchNode->point = searchPoint;
-
-		auto it = exists.find(searchNode);
-		if (it != exists.end()) {
+	for (auto node : exists) {
+		if (node->point.id == id)
 			return true;
-		} else {
-			return false;
-		}
 	}
+	return false;
+}	
+
 
 	void inject(Node* root, Node* newNode){
 		vector<Node*> children = root->children;
@@ -134,10 +130,8 @@ struct BJRTree{
 		Node* parent = node->parent;
 		vector<Node*> children = node->children;
 		//remove the node as the parent of the children and as the child of the parents
-		for(int i=0 ; i<children.size() ; i++){
-			children[i]->changeParent(nullptr);
-		}
-		vector<Node*> siblings = parent->children;
+
+		vector<Node*>& siblings = parent->children;
 		for(int i=0 ; i<siblings.size() ; i++){
 			if(siblings[i] == node){
 				siblings.erase(siblings.begin() + i);
@@ -148,8 +142,13 @@ struct BJRTree{
 		for(int i=0 ; i<children.size() ; i++){
 			inject(parent, children[i]);
 		}
+		
+		exists.erase(node);
 
 	}
+	
+
+
 	
 	Node* findNodeById(int id) {
         for (auto node : exists) {
@@ -161,26 +160,37 @@ struct BJRTree{
     }
 };
 
+vector<string> readData(string address){
+	vector<string> content;
+	string line;
+	ifstream fin(address);
+	while(getline(fin, line)){
+		content.push_back(line);
+	}
+	fin.close();
+	return content;
+}
+
+
+
 int main(){
 	cout << "program started!" << endl;
 	ifstream infoRead("small.setup");
 	string info;
 	int dim;
 	int timeSteps;
-
 	getline(infoRead, info);
 	stringstream ss(info);
 	string numPoints, dimention, timeStepsNum, size, type;
 	ss >> numPoints >>  dimention >> timeStepsNum >> size >> type;
    	dim = stoi(dimention);
 	timeSteps = stoi(timeStepsNum);
-
-	ss.clear();
 	infoRead.close();
-	ifstream fin("small.input");
-	ifstream inTime("small.times");
+	ss.clear();
 
-
+	vector<string> times = readData("small.times");
+	vector<string> values = readData("small.input");
+	
 	int id = 0;
 	vector<string> skyline(timeSteps);
 	int start, end;
@@ -190,31 +200,26 @@ int main(){
 	myTree.root = root;
 	vector<string> currentCoordinates(dim);
 	string temp;
-
+	stringstream no;
 
 	//set the timesteps correct
 	for(int time=0 ; time<timeSteps ; time++){
 		id = 0;
-		while(getline(inTime, range)){
-			fin.clear();
-    		fin.seekg(0, std::ios::beg);
+
+		for(int t=0 ; t<times.size() ; t++){
+			range = times[t];
 			ss.clear();
 			ss.str(range);
 			ss >> strStart >> strEnd;
 			start = stoi(strStart);
 			end = stoi(strEnd);
 
-			
-			if(time >= start && time <= end ){
+			if(time >= start && time <= end-1 ){
 				if(myTree.doesPointExist(id)){
 					id++;
 					continue;
 				} else{
-
-					for(int i=0 ; i<id ; i++){
-						getline(fin, coordinates);
-					}
-					getline(fin, coordinates);
+					coordinates = values[id];
                     ss.clear();
                     ss.str(coordinates);
                     Point point;
@@ -233,30 +238,31 @@ int main(){
 	            if(time < start){
                     break;              			
 				}
-				if((time > end || time < start) && myTree.doesPointExist(id)){
+				if((time >= end || time < start) && myTree.doesPointExist(id)){
 					Node* deletingNode = myTree.findNodeById(id);
 					myTree.eject(deletingNode);
 				}
 			}
 			id++;
-        }
-
+			
+		}
 		vector<Node*> skylinePoints = myTree.root->children;
+
+		sort(skylinePoints.begin(), skylinePoints.end(), [](Node* a, Node* b) {
+            return a->point.id < b->point.id;
+        });
+
 		string skylineStr = "";
 		for(int i=0 ; i<skylinePoints.size() ; i++){
 			skylineStr += " "+to_string(skylinePoints[i]->point.id);
 		}
 		skyline[time] = skylineStr;
 
-
-		inTime.clear();
-		inTime.seekg(0, std::ios::beg);
-		//todo clear reading buffers
 	}
 
-	cout << skyline[3] << endl;
-	cout << skyline[4] << endl;
-	cout << "end";
-
+	for(int i=0 ; i<skyline.size() ; i++){
+		cout << i+1 << ") " << skyline[i] << endl;
+	}
+	cout << "program ended" << endl;
 
 }
