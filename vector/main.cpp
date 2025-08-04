@@ -3,7 +3,6 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
-#include <string>
 #include "modules.hpp"
 
 
@@ -58,12 +57,24 @@ int main() {
     vector<string> skyline(timeSteps);
     int start, end;
     string strStart, strEnd, range, coordinates;
+
 	Node* root = new Node();
     root->isRoot = true;
 	BJRTree myTree;
     myTree.root = root;
     myTree.depth = 10;
     myTree.lazy = true;
+    myTree.ND_use = true;
+
+    if(myTree.ND_use){
+        int* ND_cache = new int[values.size()];
+        for(int i=0 ; i<values.size() ; i++){
+            ND_cache[i] = -1;
+        }
+        myTree.ND_cach = ND_cache;
+    }
+
+
     string temp;
 
     for (int time = 0; time < timeSteps; time++) {
@@ -124,8 +135,13 @@ int main() {
             } else{
                 skylineStr += " " + to_string(skylinePoints[i]->point.id);
             }
+
+            //lazy
+            if(myTree.ND_use)
+                myTree.ND_cach[i] = time;
         }
         skyline[time] = skylineStr;
+
     }
 
     ifstream ref("small.refout");
@@ -142,7 +158,7 @@ int main() {
         }
     }
 
-    float error_rate = errors/skyline.size()*100;
-    printf("erro rate: %.2f%%\n", error_rate);
+    float error_rate = float(errors)/float(skyline.size())*100;
+    printf("error rate: %.2f%%\n", error_rate);
     cout << "program finished" << endl;
 }

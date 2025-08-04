@@ -20,6 +20,19 @@ struct Point {
         return res;
     }
 
+
+    bool smartDominate(Point secondPoint, int* ND_cache){
+        if(ND_cache == nullptr){
+            cout << "Cache is null" << endl;
+            return false;  
+        }
+
+        if((ND_cache[id] == ND_cache[secondPoint.id]) && (ND_cache[id] != -1 || ND_cache[secondPoint.id]!=-1)) return false;
+        else{
+            return this->dominate(secondPoint);
+        }
+    }
+
     bool operator==(const Point& other) const {
         return id == other.id;
     }
@@ -68,6 +81,8 @@ struct BJRTree {
     vector<Node*> exists;
 	int depth = 0;
     bool lazy = false;
+    int* ND_cach = nullptr;
+    bool ND_use = false;
 
 
     bool doesPointExist(int id) {
@@ -132,10 +147,18 @@ struct BJRTree {
         Node* currentNode = nullptr;
         for (int i = 0; i < children.size(); i++) {
             currentNode = children[i];
-            if (currentNode->point.dominate(newNode->point)) {
-                inject(currentNode, newNode);
-                return;
+            if(ND_use){
+                if (currentNode->point.smartDominate(newNode->point, ND_cach)) {
+                    inject(currentNode, newNode);
+                    return;
+                }
+            } else{
+                if (currentNode->point.dominate(newNode->point)) {
+                    inject(currentNode, newNode);
+                    return;
+                }
             }
+            
         }
 
         root->addChild(newNode);
@@ -144,11 +167,20 @@ struct BJRTree {
 
         for (int i = 0; i < children.size(); i++) {
             currentNode = children[i];
-            if (newNode->point.dominate(currentNode->point)) {
-                currentNode->changeParent(newNode);
-                newNode->addChild(currentNode);
-                root->remove(currentNode);
+            if(ND_use){
+                if (newNode->point.smartDominate(currentNode->point, ND_cach)) {
+                    currentNode->changeParent(newNode);
+                    newNode->addChild(currentNode);
+                    root->remove(currentNode);
+                }
+            } else{
+                if (newNode->point.dominate(currentNode->point)) {
+                    currentNode->changeParent(newNode);
+                    newNode->addChild(currentNode);
+                    root->remove(currentNode);
+                }
             }
+            
         }
     }
 
@@ -160,10 +192,18 @@ struct BJRTree {
 			Node* chosenNode = nullptr;
 			for(auto child : children){
                 int d = Desc(child);
-				if(child->point.dominate(newNode->point) && d < g){
-					chosenNode = child;
-					g = d;
-				}
+                if(ND_use){
+                    if(child->point.smartDominate(newNode->point, ND_cach) && d < g){
+                        chosenNode = child;
+                        g = d;
+                    }
+                } else{
+                    if(child->point.dominate(newNode->point) && d < g){
+                        chosenNode = child;
+                        g = d;
+                    }
+                }
+				
 			}
 
             if (chosenNode != nullptr) {
@@ -176,9 +216,16 @@ struct BJRTree {
                 if (root->isRoot || Depth(root) < depth) {
                     vector<Node*> toReparent;
                     for (auto child : root->children) {
-                        if (newNode->point.dominate(child->point)) {
-                            toReparent.push_back(child);
+                        if(ND_use){
+                            if (newNode->point.smartDominate(child->point, ND_cach)) {
+                                toReparent.push_back(child);
+                            }
+                        } else{
+                            if (newNode->point.dominate(child->point)) {
+                                toReparent.push_back(child);
+                            }
                         }
+                        
                     }
 
                     for (auto child : toReparent) {
