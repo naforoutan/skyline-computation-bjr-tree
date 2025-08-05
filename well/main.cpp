@@ -49,23 +49,33 @@ vector<int> init(string address){
     return res;
 }
 
-vector<Node*> bubble_sort(vector<Node*> vec) {
-    int len = vec.size();
+int partition(vector<Node*>& vec, int low, int high) {
+    int pivot = vec[high]->point.id;
+    int i = (low - 1);
     
-    for (int i = 0; i < len; i++) {
-        for (int j = 0; j < len - 1 - i; j++) {
-            if (vec[j]->point.id > vec[j + 1]->point.id) {
-                swap(vec[j], vec[j + 1]);
-            }
+    for (int j = low; j < high; j++) {
+        if (vec[j]->point.id < pivot) {
+            i++;
+            swap(vec[i], vec[j]);
         }
     }
-    return vec;
+    swap(vec[i + 1], vec[high]);
+    return i + 1;
+}
+
+void quick_sort(vector<Node*>& vec, int low, int high) {
+    if (low < high) {
+        int pi = partition(vec, low, high);
+
+        quick_sort(vec, low, pi - 1);
+        quick_sort(vec, pi + 1, high);
+    }
 }
 
 
 int main(){
     auto start_time = chrono::high_resolution_clock::now();
-    string version = "large";
+    string version = "medium";
 
     cout << "The program started..." << endl;
     vector<int> info;
@@ -134,13 +144,13 @@ int main(){
                     coordinates = values[id];
                     ss.clear();
                     ss.str(coordinates);
-                    Point point;
-                    point.id = id;
-                    point.dim = dim;
+
+                    Point point(id, dim);
                     for (int i = 0; i < dim; i++) {
                         ss >> temp;
                         point.values[i] = stoi(temp);
                     }
+
                     Node* newNode = new Node();
                     newNode->point = point;
                     
@@ -155,13 +165,12 @@ int main(){
             } else{
                 if (time < start) break;
                 if ((time >= end || time < start) && my_tree->does_point_exist(id)) {
-                    //todo
                     Point deleting_point;
                     Node* deleting_node = new Node();
                     deleting_point.id = id;
                     deleting_node->point = deleting_point;
                     my_tree->eject(deleting_node);
-                    delete deleting_node, deleting_point;
+                    delete deleting_node;
                 }
             }
             id++;
@@ -170,7 +179,7 @@ int main(){
         Node** skylinePoints = my_tree->root->get_children();
         int len = my_tree->root->children_size();
         vector<Node*> skyline_vec(skylinePoints, skylinePoints + len);
-        skyline_vec = bubble_sort(skyline_vec);
+        quick_sort(skyline_vec, 0, skyline_vec.size() - 1);
         string skyline_str = "";
         for (int i = 0; i < skyline_vec.size(); i++) {
             if(i==0){

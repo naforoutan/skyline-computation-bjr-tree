@@ -5,12 +5,40 @@
 #include <cmath>
 using namespace std;
 
-struct Point{
+struct Point {
     int id;
-    int dim = 0;
-    int* values = new int[dim];
-    Point() : id(-1) {}
-    Point(int which, int dimention) : id(which), dim(dimention) {}
+    int dim;
+    int* values;
+
+    Point() : id(-1), dim(0), values(nullptr) {}
+
+    Point(int which, int dimension) : id(which), dim(dimension) {
+        values = new int[dim]; 
+    }
+
+    ~Point() {
+        delete[] values; 
+    }
+
+    Point(const Point& other) {
+        id = other.id;
+        dim = other.dim;
+        values = new int[dim];
+        for (int i = 0; i < dim; ++i)
+            values[i] = other.values[i];
+    }
+
+    Point& operator=(const Point& other) {
+        if (this != &other) {
+            delete[] values;
+            dim = other.dim;
+            id = other.id;
+            values = new int[dim];
+            for (int i = 0; i < dim; ++i)
+                values[i] = other.values[i];
+        }
+        return *this;
+    }
 
     bool dominate(Point second) {
         bool res = false;
@@ -26,11 +54,9 @@ struct Point{
             cout << "Cache is null" << endl;
             return false;  
         }
-
-        if((ND_cache[id] == ND_cache[secondPoint.id]) && (ND_cache[id] != -1 || ND_cache[secondPoint.id]!=-1)) return false;
-        else{
-            return this->dominate(secondPoint);
-        }
+        if ((ND_cache[id] == ND_cache[secondPoint.id]) && 
+            (ND_cache[id] != -1 || ND_cache[secondPoint.id] != -1)) return false;
+        else return this->dominate(secondPoint);
     }
 
     bool operator==(const Point& other) const {
