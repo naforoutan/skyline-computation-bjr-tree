@@ -39,7 +39,7 @@ string trim(const std::string& str) {
 
 int main() {
     cout << "program started!" << endl;
-    ifstream infoRead("medium.setup");
+    ifstream infoRead("small.setup");
     string info;
     int dim, timeSteps;
     getline(infoRead, info);
@@ -50,8 +50,8 @@ int main() {
     timeSteps = stoi(timeStepsNum);
     infoRead.close();
 
-    vector<string> times = readData("medium.times");
-    vector<string> values = readData("medium.input");
+    vector<string> times = readData("small.times");
+    vector<string> values = readData("small.input");
 
     int id = 0;
     vector<string> skyline(timeSteps);
@@ -63,7 +63,7 @@ int main() {
 	BJRTree myTree;
     myTree.root = root;
     myTree.depth = 10;
-    myTree.lazy = false;
+    myTree.lazy = true;
     myTree.ND_use = true;
 
     if(myTree.ND_use){
@@ -79,7 +79,6 @@ int main() {
 
     for (int time = 0; time < timeSteps; time++) {
         id = 0;
-        cout << "time " << time << endl;
         for (int t = 0; t < times.size(); t++) {
             range = times[t];
             ss.clear();
@@ -145,7 +144,7 @@ int main() {
 
     }
 
-    ifstream ref("medium.refout");
+    ifstream ref("small.refout");
     string check;
     int errors=0;
 

@@ -1,3 +1,6 @@
+#ifndef BJR_TREE_HPP
+#define BJR_TREE_HPP
+
 #include <iostream>
 #include <cmath>
 using namespace std;
@@ -6,7 +9,7 @@ struct Point{
     int id;
     int dim = 0;
     int* values = new int[dim];
-    Point() : id(0) {}
+    Point() : id(-1) {}
     Point(int which, int dimention) : id(which), dim(dimention) {}
 
     bool dominate(Point second) {
@@ -42,19 +45,25 @@ struct Node{
     Point point;
     bool is_root = false;
 
-    void add_child(Node* child){
-        if(head_child == nullptr){
+   void add_child(Node* child){
+        if (head_child == nullptr) {
             head_child = child;
-            return;
+        } else {
+            Node* current = head_child;
+            while (current->next != nullptr) {
+                if (current == child) return;
+                current = current->next;
+            }
+            if (current == child) return;
+
+            current->next = child;
         }
-        Node* current = head_child;
-        while(current->next != nullptr){
-            current = current->next;
-        }
-        current->next = child;
+
+        child->next = nullptr;
         child->parent = this;
-        delete current;
     }
+
+ 
 
     int children_size(){
         Node* current = head_child;
@@ -63,19 +72,20 @@ struct Node{
             res++;
             current = current->next;
         }
-        delete current;
         return res;
     }
 
     void remove_child(Node* child){
-        int id = child->point.id;
-        if(head_child->point.id == child->point.id){
-            this->head_child = this->head_child->next;
-        }
-        Node* current = head_child;
+        if(head_child == nullptr || child == nullptr) return;
 
+        if(head_child == child){
+            this->head_child = this->head_child->next;
+            return;
+        }
+
+        Node* current = head_child;
         while(current->next != nullptr){
-            if(current->next->point.id == child->point.id){
+            if(current->next == child){
                 current->next = current->next->next;
                 break;
             } 
@@ -101,26 +111,42 @@ struct Node{
 
 };
 
-struct NodeComparator {
-    bool operator()(const Node* lhs, const Node* rhs) const {
-        return lhs->point.id < rhs->point.id;
-    }
-};
 
 struct BJR_tree{
     Node* root;
     int total_points = 0;
-    bool* exits = new bool[total_points];
+    bool* exists;
     int depth = 0;
     bool lazy = false;
     int* ND_cache = nullptr;
     bool ND_use = false;
 
-    BJR_tree(Node* set_root, int set_total) : root(set_root), total_points(set_total) {}
+    BJR_tree(int num_points) : total_points(num_points) {
+        exists = new bool[total_points];
+        for(int i=0 ; i<total_points ; i++){
+            exists[i] = false;
+        }
+    }
+
 
     bool does_point_exist(int id){
-        return exits[id];
+        return exists[id];
     }
+
+    Node* find_node_by_id(int id, Node* root) {
+        if (root == nullptr) return nullptr;
+        if (root->point.id == id) return root;
+
+        Node* current = root->head_child;
+        while (current != nullptr) {
+            Node* res = find_node_by_id(id, current);
+            if (res != nullptr) return res;
+            current = current->next;
+        }
+
+        return nullptr;
+    }
+
 
     int Depth(Node* node){
         int res = 0;
@@ -129,7 +155,6 @@ struct BJR_tree{
             res++;
             current = current->parent;
         }
-        delete current;
         return res;
     }
 
@@ -144,24 +169,23 @@ struct BJR_tree{
             current = current->next;
         }
 
-        delete current;
         return res;
     }
 
     void add_to_exists(Node* node){
         int id = node->point.id;
-        exits[id] = true;
+        exists[id] = true;
     }
 
     void remove_exists(Node* node){
         int id = node->point.id;
-        exits[id] = false;
+        exists[id] = false;
     }
 
+   void inject(Node* root, Node* new_node){
+        if (root == new_node) return;
 
-    void inject(Node* root, Node* new_node){
         Node* current = root->head_child;
-
         while(current != nullptr){
             if(ND_use){
                 if (current->point.smart_dominate(new_node->point, ND_cache)) {
@@ -177,30 +201,37 @@ struct BJR_tree{
             current = current->next;
         }
 
-
         root->add_child(new_node);
         new_node->parent = root;
-        current = root->head_child;
 
+        current = root->head_child;
         while(current != nullptr){
+            Node* next = current->next;
+
+            if (current == new_node) {
+                current = next;
+                continue;
+            }
+
+            bool should_move = false;
             if(ND_use){
                 if (new_node->point.smart_dominate(current->point, ND_cache)) {
-                    current->parent = new_node;
-                    new_node->add_child(current);
-                    root->remove_child(current);
+                    should_move = true;
                 }
             } else{
                 if (new_node->point.dominate(current->point)) {
-                    current->parent = new_node;
-                    new_node->add_child(current);
-                    root->remove_child(current);
+                    should_move = true;
                 }
             }
-            current = current->next;
+
+            if(should_move){
+                root->remove_child(current);
+                current->parent = new_node;
+                new_node->add_child(current);
+            }
+
+            current = next;
         }
-
-        delete current;
-
     }
 
     void lazy_inject(Node* root, Node* new_node){
@@ -252,47 +283,66 @@ struct BJR_tree{
                     }
                 }
             }
-            
-            delete child;
-            delete chosen;
 
         }
     }
 
-    void eject(Node* node){
+    void eject(Node* example_node) {
+
+        Node* node = find_node_by_id(example_node->point.id, root);
+
+        if (node == nullptr || node->is_root) return;
+
         Node* parent = node->parent;
-        Node* current = node->head_child;
-        Node* child = nullptr;
+        Node* child = node->head_child;
 
-        if(current->point.id == node->point.id){
-            parent->head_child = current->next;
-        } else{
-            while(current->next->point.id != node->point.id && current->next != nullptr){
-                current = current->next;
-            }
-            if(current->next->point.id != node->point.id){
-                cout << "error";
-                return;
-            }
-
-            //considering coordinates
-            node = current->next;
-            current->next = current->next->next;
-            child = node->head_child;
-
-            while(child != nullptr){
-                if(lazy){
-                    lazy_inject(parent, child);
-                } else{
-                    inject(parent, child);
-                }
-                child = child->next;
-            }
-
+        if (parent != nullptr) {
+            parent->remove_child(node);
         }
 
-        delete parent, current, child;
+        while (child != nullptr) {
+            Node* next_child = child->next;
+            child->parent = nullptr;
+            if (lazy) {
+                lazy_inject(parent, child);
+            } else {
+                inject(parent, child);
+            }
+            child = next_child;
+        }
 
+        remove_exists(node);
     }
+
+    void eject_by_id(int id) {
+        Node* node = find_node_by_id(id, root);
+        if (node == nullptr || node->is_root) {
+            cout << "⚠️ Could not find node with id " << id << endl;
+            return;
+        }
+
+        Node* parent = node->parent;
+        Node* child = node->head_child;
+
+        if (parent != nullptr) {
+            parent->remove_child(node);
+        }
+
+        while (child != nullptr) {
+            Node* next_child = child->next;
+            child->parent = nullptr;
+            if (lazy)
+                lazy_inject(parent, child);
+            else
+                inject(parent, child);
+            child = next_child;
+        }
+
+        remove_exists(node);
+    }
+
 
 };
+
+
+#endif
