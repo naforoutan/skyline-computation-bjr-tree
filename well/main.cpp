@@ -75,7 +75,7 @@ void quick_sort(vector<Node*>& vec, int low, int high) {
 
 int main(){
     auto start_time = chrono::high_resolution_clock::now();
-    string version = "medium";
+    string version = "large";
 
     cout << "The program started..." << endl;
     vector<int> info;

@@ -345,7 +345,7 @@ struct BJR_tree{
     void eject_by_id(int id) {
         Node* node = find_node_by_id(id, root);
         if (node == nullptr || node->is_root) {
-            cout << "⚠️ Could not find node with id " << id << endl;
+            cout << "Could not find node with id " << id << endl;
             return;
         }
 
