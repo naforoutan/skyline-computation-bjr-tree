@@ -111,7 +111,6 @@ struct Node{
 
 };
 
-
 struct BJR_tree{
     Node* root;
     int total_points = 0;
@@ -182,7 +181,7 @@ struct BJR_tree{
         exists[id] = false;
     }
 
-   void inject(Node* root, Node* new_node){
+    void inject(Node* root, Node* new_node){
         if (root == new_node) return;
 
         Node* current = root->head_child;

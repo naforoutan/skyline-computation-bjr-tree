@@ -85,7 +85,7 @@ int main(){
     my_tree->root = root;
     my_tree->total_points = values.size();
     my_tree->lazy = false;
-    my_tree->ND_use = false;
+    my_tree->ND_use = true;
     my_tree->depth = 10;
 
     if(my_tree->ND_use){

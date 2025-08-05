@@ -241,7 +241,6 @@ struct BJRTree {
 	}
 
 
-
     Node* findNodeById(int id) {
         for (auto node : exists) {
             if (node->point.id == id)
