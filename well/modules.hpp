@@ -238,7 +238,8 @@ struct BJR_tree{
 
             float g = INFINITY;
             Node* child = root->head_child;
-            Node* chosen;
+            Node* chosen = nullptr;
+
             while(child != nullptr){
                 int d = Desc(child);
                 if(ND_use){
@@ -252,6 +253,7 @@ struct BJR_tree{
                         g = d;
                     }
                 }
+                child = child->next;
             }
 
             if( chosen != nullptr){
@@ -264,6 +266,7 @@ struct BJR_tree{
 
                 if(root->is_root || Depth(root) < depth){
                     while(child != nullptr){
+                        Node* next = child->next;
                         if(ND_use){
                             if(new_node->point.smart_dominate(child->point, ND_cache)){
                                 root->remove_child(child);
@@ -278,7 +281,7 @@ struct BJR_tree{
                             }
 
                         }
-                        child = child->next;
+                        child = next;
                     }
                 }
             }

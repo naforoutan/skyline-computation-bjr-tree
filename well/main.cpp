@@ -3,7 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include "modules.hpp"
-#include <algorithm>
+#include <chrono>
 using namespace std;
 
 
@@ -49,7 +49,6 @@ vector<int> init(string address){
     return res;
 }
 
-
 vector<Node*> bubble_sort(vector<Node*> vec) {
     int len = vec.size();
     
@@ -65,15 +64,31 @@ vector<Node*> bubble_sort(vector<Node*> vec) {
 
 
 int main(){
+    auto start_time = chrono::high_resolution_clock::now();
+    string version = "large";
+
     cout << "The program started..." << endl;
-    vector<int> info = init("small.setup");
+    vector<int> info;
+    vector<string> times, values;
+
+    if(version == "small"){
+        info = init("dataset/small/small.setup");
+        times = readData("dataset/small/small.times");
+        values = readData("dataset/small/small.input");
+
+    } else if(version == "medium"){
+        info = init("dataset/medium/medium.setup");
+        times = readData("dataset/medium/medium.times");
+        values = readData("dataset/medium/medium.input");
+
+    } else{
+        info = init("dataset/large/large.setup");
+        times = readData("dataset/large/large.times");
+        values = readData("dataset/large/large.input");
+    }
+    
     int dim = info[1];
     int time_steps = info[2];
-
-
-    vector<string> times = readData("small.times");
-    vector<string> values = readData("small.input");
-
     int id = 0;
     vector<string> skyline(time_steps);
     int start, end;
@@ -85,7 +100,7 @@ int main(){
     my_tree->root = root;
     my_tree->total_points = values.size();
     my_tree->lazy = false;
-    my_tree->ND_use = true;
+    my_tree->ND_use = false;
     my_tree->depth = 10;
 
     if(my_tree->ND_use){
@@ -100,6 +115,7 @@ int main(){
     string temp;
 
     for(int time = 0 ; time<time_steps ; time++){
+        cout << "time: " << time  << endl;
         id = 0;
         for(int t=0 ; t<times.size() ; t++){
             range = times[t];
@@ -171,7 +187,14 @@ int main(){
 
     }
 
-    ifstream ref("small.refout");
+    ifstream ref;
+    if (version == "small") {
+        ref.open("dataset/small/small.refout"); 
+    } else if (version == "medium") {
+        ref.open("dataset/medium/medium.refout");
+    } else {
+        ref.open("dataset/large/large.refout"); 
+    }
     string check;
     int errors=0;
 
@@ -188,5 +211,9 @@ int main(){
     float error_rate = float(errors)/float(skyline.size())*100;
     printf("error rate: %.2f%%\n", error_rate);
     cout << "program finished" << endl;
-    
+
+    auto end_time = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::milliseconds>(end_time - start_time);
+    cout << "Execution time: " << duration.count() << " ms" << endl;
+    return 0;
 }

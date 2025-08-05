@@ -3,8 +3,8 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <chrono>
 #include "modules.hpp"
-
 
 #include <string>
 #include <cctype> 
@@ -21,7 +21,6 @@ vector<string> readData(string address) {
     return content;
 }
 
-
 string trim(const std::string& str) {
     size_t first = 0;
     while (first < str.size() && std::isspace(str[first])) {
@@ -36,52 +35,79 @@ string trim(const std::string& str) {
     return str.substr(first, last - first);
 }
 
-
-int main() {
-    cout << "program started!" << endl;
-    ifstream infoRead("small.setup");
+vector<int> init(string address) {
+    ifstream infoRead(address);
+    vector<int> res;
     string info;
-    int dim, timeSteps;
+    int dim, timeSteps, len, type;
     getline(infoRead, info);
     stringstream ss(info);
-    string numPoints, dimention, timeStepsNum, size, type;
-    ss >> numPoints >> dimention >> timeStepsNum >> size >> type;
-    dim = stoi(dimention);
-    timeSteps = stoi(timeStepsNum);
+    string str;
+    while (ss >> str) {
+        if (str != "small" && str != "medium" && str != "large")
+            res.push_back(stoi(str));
+    }
+
     infoRead.close();
+    return res;
+}
 
-    vector<string> times = readData("small.times");
-    vector<string> values = readData("small.input");
+int main() {
+    auto start_time = chrono::high_resolution_clock::now();
+    string version = "medium";
 
+    cout << "The program started..." << endl;
+    vector<int> info;
+    vector<string> times, values;
+
+    if (version == "small") {
+        info = init("dataset/small/small.setup");
+        times = readData("dataset/small/small.times");
+        values = readData("dataset/small/small.input");
+
+    } else if (version == "medium") {
+        info = init("dataset/medium/medium.setup");
+        times = readData("dataset/medium/medium.times");
+        values = readData("dataset/medium/medium.input");
+
+    } else {
+        info = init("dataset/large/large.setup");
+        times = readData("dataset/large/large.times");
+        values = readData("dataset/large/large.input");
+    }
+
+    int dim = info[1];
+    int time_steps = info[2];
     int id = 0;
-    vector<string> skyline(timeSteps);
+    vector<string> skyline(time_steps);
     int start, end;
     string strStart, strEnd, range, coordinates;
 
-	Node* root = new Node();
+    Node* root = new Node();
     root->isRoot = true;
-	BJRTree myTree;
+    BJRTree myTree;
     myTree.root = root;
     myTree.depth = 10;
     myTree.lazy = true;
     myTree.ND_use = true;
 
-    if(myTree.ND_use){
+    if (myTree.ND_use) {
         int* ND_cache = new int[values.size()];
-        for(int i=0 ; i<values.size() ; i++){
+        for (int i = 0; i < values.size(); i++) {
             ND_cache[i] = -1;
         }
         myTree.ND_cach = ND_cache;
     }
 
-
     string temp;
+    stringstream ss;  // Declare stringstream here
 
-    for (int time = 0; time < timeSteps; time++) {
+    for (int time = 0; time < time_steps; time++) {
+        cout << "time: " << time << endl;
         id = 0;
         for (int t = 0; t < times.size(); t++) {
             range = times[t];
-            ss.clear();
+            ss.clear();  // Clear stringstream for reuse
             ss.str(range);
             ss >> strStart >> strEnd;
             start = stoi(strStart);
@@ -93,7 +119,7 @@ int main() {
                     continue;
                 } else {
                     coordinates = values[id];
-                    ss.clear();
+                    ss.clear();  // Clear stringstream for reuse
                     ss.str(coordinates);
                     Point point;
                     point.id = id;
@@ -103,14 +129,12 @@ int main() {
                     }
                     Node* newNode = new Node();
                     newNode->point = point;
-                    
-                    if(myTree.lazy){
+
+                    if (myTree.lazy) {
                         myTree.lazyInject(root, newNode);
-                    } else{
+                    } else {
                         myTree.inject(root, newNode);
-                       
                     }
-                    // myTree.exists.insert(newNode);
                     myTree.addToExists(newNode);
                 }
             } else {
@@ -130,27 +154,33 @@ int main() {
 
         string skylineStr = "";
         for (int i = 0; i < skylinePoints.size(); i++) {
-            if(i==0){
+            if (i == 0) {
                 skylineStr += "" + to_string(skylinePoints[i]->point.id);
-            } else{
+            } else {
                 skylineStr += " " + to_string(skylinePoints[i]->point.id);
             }
 
-            //lazy
-            if(myTree.ND_use)
+            // Lazy update cache if needed
+            if (myTree.ND_use)
                 myTree.ND_cach[i] = time;
         }
         skyline[time] = skylineStr;
-
     }
 
-    ifstream ref("small.refout");
+    ifstream ref;
+    if (version == "small") {
+        ref.open("dataset/small/small.refout");
+    } else if (version == "medium") {
+        ref.open("dataset/medium/medium.refout");
+    } else {
+        ref.open("dataset/large/large.refout");
+    }
     string check;
-    int errors=0;
+    int errors = 0;
 
     for (int i = 0; i < skyline.size(); i++) {
         getline(ref, check);
-        if(trim(check) !=  trim(skyline[i])){
+        if (trim(check) != trim(skyline[i])) {
             cout << "error" << endl;
             cout << "sky " << i << ": " << skyline[i] << endl;
             cout << "che " << i << ": " << check << endl << endl;
@@ -158,7 +188,7 @@ int main() {
         }
     }
 
-    float error_rate = float(errors)/float(skyline.size())*100;
+    float error_rate = float(errors) / float(skyline.size()) * 100;
     printf("error rate: %.2f%%\n", error_rate);
     cout << "program finished" << endl;
 }
