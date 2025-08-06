@@ -73,9 +73,24 @@ void quick_sort(vector<Node*>& vec, int low, int high) {
 }
 
 
+void print(string address, vector<string> data){
+    ofstream fout;
+    fout.open(address);
+    int len = data.size();
+    if(fout.is_open()){
+        for(const auto& skyline : data){
+            fout << skyline << endl;
+        }
+        fout.close();
+        cout << "Data printed in .out" << endl;
+    } else{
+        cout << "Error: Unable to open file." << endl;
+    }
+}
+
 int main(){
     auto start_time = chrono::high_resolution_clock::now();
-    string version = "large";
+    string version = "medium";
 
     cout << "The program started..." << endl;
     vector<int> info;
@@ -111,15 +126,16 @@ int main(){
     my_tree->total_points = values.size();
     my_tree->lazy = false;
     my_tree->ND_use = false;
-    my_tree->depth = 10;
+    my_tree->depth = 5;
 
-    if(my_tree->ND_use){
+    if (my_tree->ND_use) {
         int* ND_cache = new int[values.size()];
-        for(int i=0 ; i<values.size() ; i++){
+        for (int i = 0; i < values.size(); ++i) {
             ND_cache[i] = -1;
         }
         my_tree->ND_cache = ND_cache;
     }
+
 
     stringstream ss("");
     string temp;
@@ -224,5 +240,13 @@ int main(){
     auto end_time = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::milliseconds>(end_time - start_time);
     cout << "Execution time: " << duration.count() << " ms" << endl;
+
+    if(version == "small"){
+        print("dataset/small/small.out", skyline);
+    } else if(version == "medium"){
+        print("dataset/medium/medium.out", skyline);
+    } else{
+        print("dataset/large/large.out", skyline);
+    }
     return 0;
 }
