@@ -4,6 +4,7 @@
 #include <sstream>
 #include "modules.hpp"
 #include <chrono>
+#include <cmath>
 using namespace std;
 
 
@@ -89,7 +90,6 @@ void print(string address, vector<string> data){
 }
 
 int main(){
-    auto start_time = chrono::high_resolution_clock::now();
     string version = "medium";
 
     cout << "The program started..." << endl;
@@ -111,6 +111,8 @@ int main(){
         times = readData("dataset/large/large.times");
         values = readData("dataset/large/large.input");
     }
+
+    auto start_time = chrono::high_resolution_clock::now();
     
     int dim = info[1];
     int time_steps = info[2];
@@ -126,11 +128,11 @@ int main(){
     my_tree->total_points = values.size();
     my_tree->lazy = false;
     my_tree->ND_use = false;
-    my_tree->depth = 5;
+    my_tree->depth = 7;
 
     if (my_tree->ND_use) {
         int* ND_cache = new int[values.size()];
-        for (int i = 0; i < values.size(); ++i) {
+        for (int i = 0; i < values.size(); i++) { 
             ND_cache[i] = -1;
         }
         my_tree->ND_cache = ND_cache;
@@ -234,7 +236,7 @@ int main(){
     }
 
     float error_rate = float(errors)/float(skyline.size())*100;
-    printf("error rate: %.2f%%\n", error_rate);
+    printf("Error rate: %.f%%\n", floor(error_rate));
     cout << "program finished" << endl;
 
     auto end_time = chrono::high_resolution_clock::now();
@@ -248,7 +250,6 @@ int main(){
     } else{
         print("dataset/large/large.out", skyline);
     }
+    cout << "Done for tree size: " << version << ", lazy: " << my_tree->lazy << ", nd: " << my_tree->ND_use << endl;
     return 0;
 }
-
-(جمع نمرات اجباری/ کل اجباری)*5 +‌ (جمع نمرات امتیازی/ کل امتیازی)*0.5

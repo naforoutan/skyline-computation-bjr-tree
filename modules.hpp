@@ -54,9 +54,10 @@ struct Point {
             cout << "Cache is null" << endl;
             return false;  
         }
-        if ((ND_cache[id] == ND_cache[secondPoint.id]) && 
-            (ND_cache[id] != -1 || ND_cache[secondPoint.id] != -1)) return false;
-        else return this->dominate(secondPoint);
+
+        if(ND_cache[id] == -1 || ND_cache[secondPoint.id] == -1 || ND_cache[id] != ND_cache[secondPoint.id]){
+            return this->dominate(secondPoint);
+        } else return false;
     }
 
     bool operator==(const Point& other) const {
@@ -260,10 +261,11 @@ struct BJR_tree{
     }
 
     void lazy_inject(Node* root, Node* new_node){
+        Node* child = root->head_child;
+
         if(root->is_root || (Depth(root) < this->depth)){
 
             float g = INFINITY;
-            Node* child = root->head_child;
             Node* chosen = nullptr;
 
             while(child != nullptr){
@@ -285,33 +287,32 @@ struct BJR_tree{
             if( chosen != nullptr){
                 lazy_inject(chosen, new_node);
                 return;
-            } else{
-                root->add_child(new_node);
-                new_node->parent = root;
-                child = root->head_child;
+            } 
+        }
 
-                if(root->is_root || Depth(root) < depth){
-                    while(child != nullptr){
-                        Node* next = child->next;
-                        if(ND_use){
-                            if(new_node->point.smart_dominate(child->point, ND_cache)){
-                                root->remove_child(child);
-                                child->parent = new_node;
-                                new_node->add_child(child);
-                            }
-                        } else{
-                            if(new_node->point.dominate(child->point)){
-                                root->remove_child(child);
-                                child->parent = new_node;
-                                new_node->add_child(child);
-                            }
+        root->add_child(new_node);
+        new_node->parent = root;
+        child = root->head_child;
 
-                        }
-                        child = next;
+        if(root->is_root || Depth(root) < depth){
+            while(child != nullptr){
+                Node* next = child->next;
+                if(ND_use){
+                    if(new_node->point.smart_dominate(child->point, ND_cache)){
+                        root->remove_child(child);
+                        child->parent = new_node;
+                        new_node->add_child(child);
                     }
-                }
-            }
+                } else{
+                    if(new_node->point.dominate(child->point)){
+                        root->remove_child(child);
+                        child->parent = new_node;
+                        new_node->add_child(child);
+                    }
 
+                }
+                child = next;
+            }
         }
     }
 
