@@ -11,58 +11,16 @@ struct Point {
     int* values;
 
     Point() : id(-1), dim(0), values(nullptr) {}
-
     Point(int which, int dimension) : id(which), dim(dimension) {
         values = new int[dim]; 
     }
-
     ~Point() {
         delete[] values; 
     }
 
-    Point(const Point& other) {
-        id = other.id;
-        dim = other.dim;
-        values = new int[dim];
-        for (int i = 0; i < dim; ++i)
-            values[i] = other.values[i];
-    }
-
-    Point& operator=(const Point& other) {
-        if (this != &other) {
-            delete[] values;
-            dim = other.dim;
-            id = other.id;
-            values = new int[dim];
-            for (int i = 0; i < dim; ++i)
-                values[i] = other.values[i];
-        }
-        return *this;
-    }
-
-    bool dominate(Point second) {
-        bool res = false;
-        for (int i = 0; i < dim; i++) {
-            if (values[i] > second.values[i]) return false;
-            if (values[i] < second.values[i]) res = true;
-        }
-        return res;
-    }
-
-    bool smart_dominate(Point secondPoint, int* ND_cache){
-        if(ND_cache == nullptr){
-            cout << "Cache is null" << endl;
-            return false;  
-        }
-
-        if(ND_cache[id] == -1 || ND_cache[secondPoint.id] == -1 || ND_cache[id] != ND_cache[secondPoint.id]){
-            return this->dominate(secondPoint);
-        } else return false;
-    }
-
-    bool operator==(const Point& other) const {
-        return id == other.id;
-    }
+    // Remove copy operations for performance
+    Point(const Point&) = delete;
+    Point& operator=(const Point&) = delete;
 };
 
 struct Node{
@@ -72,25 +30,12 @@ struct Node{
     Point point;
     bool is_root = false;
 
-   void add_child(Node* child){
-        if (head_child == nullptr) {
-            head_child = child;
-        } else {
-            Node* current = head_child;
-            while (current->next != nullptr) {
-                if (current == child) return;
-                current = current->next;
-            }
-            if (current == child) return;
-
-            current->next = child;
-        }
-
-        child->next = nullptr;
+    void add_child(Node* child) {
+        if (child == nullptr) return;
+        child->next = head_child;  // Insert at head
         child->parent = this;
+        head_child = child;
     }
-
- 
 
     int children_size(){
         Node* current = head_child;
@@ -146,6 +91,8 @@ struct BJR_tree{
     bool lazy = false;
     int* ND_cache = nullptr;
     bool ND_use = false;
+    int current_time = 0;
+    const int ND_CACHE_WINDOW = 100; 
 
     BJR_tree(int num_points) : total_points(num_points) {
         exists = new bool[total_points];
@@ -153,7 +100,6 @@ struct BJR_tree{
             exists[i] = false;
         }
     }
-
 
     bool does_point_exist(int id){
         return exists[id];
@@ -208,21 +154,34 @@ struct BJR_tree{
         exists[id] = false;
     }
 
+    bool dominate(const Point& a, const Point& b) {
+        if (ND_use) {
+            int cache_a = ND_cache[a.id];
+            int cache_b = ND_cache[b.id];
+            
+            if (cache_a != -1 && cache_b != -1 && 
+                cache_a == cache_b &&
+                current_time - cache_a < ND_CACHE_WINDOW) {
+                return false;
+            }
+        }
+        
+        bool found_strictly_better = false;
+        for (int i = 0; i < a.dim; i++) {
+            if (a.values[i] > b.values[i]) return false;
+            if (a.values[i] < b.values[i]) found_strictly_better = true;
+        }
+        return found_strictly_better;
+    }
+
     void inject(Node* root, Node* new_node){
         if (root == new_node) return;
 
         Node* current = root->head_child;
         while(current != nullptr){
-            if(ND_use){
-                if (current->point.smart_dominate(new_node->point, ND_cache)) {
-                    inject(current, new_node);
-                    return;
-                }
-            } else{
-                if (current->point.dominate(new_node->point)) {
-                    inject(current, new_node);
-                    return;
-                }
+            if (dominate(current->point, new_node->point)) {
+                inject(current, new_node);
+                return;
             }
             current = current->next;
         }
@@ -240,14 +199,8 @@ struct BJR_tree{
             }
 
             bool should_move = false;
-            if(ND_use){
-                if (new_node->point.smart_dominate(current->point, ND_cache)) {
+            if (dominate(new_node->point, current->point)) {
                     should_move = true;
-                }
-            } else{
-                if (new_node->point.dominate(current->point)) {
-                    should_move = true;
-                }
             }
 
             if(should_move){
@@ -270,16 +223,9 @@ struct BJR_tree{
 
             while(child != nullptr){
                 int d = Desc(child);
-                if(ND_use){
-                    if(child->point.smart_dominate(new_node->point, ND_cache) && d<g){
-                        chosen = child;
-                        g = d;
-                    }
-                } else{
-                    if(child->point.dominate(new_node->point) && d<g){
-                        chosen = child;
-                        g = d;
-                    }
+                if(dominate(child->point, new_node->point) && d<g){
+                    chosen = child;
+                    g = d;
                 }
                 child = child->next;
             }
@@ -297,19 +243,10 @@ struct BJR_tree{
         if(root->is_root || Depth(root) < depth){
             while(child != nullptr){
                 Node* next = child->next;
-                if(ND_use){
-                    if(new_node->point.smart_dominate(child->point, ND_cache)){
-                        root->remove_child(child);
-                        child->parent = new_node;
-                        new_node->add_child(child);
-                    }
-                } else{
-                    if(new_node->point.dominate(child->point)){
-                        root->remove_child(child);
-                        child->parent = new_node;
-                        new_node->add_child(child);
-                    }
-
+                if(dominate(new_node->point, child->point)){
+                    root->remove_child(child);
+                    child->parent = new_node;
+                    new_node->add_child(child);
                 }
                 child = next;
             }
@@ -369,7 +306,6 @@ struct BJR_tree{
 
         remove_exists(node);
     }
-
 
 };
 

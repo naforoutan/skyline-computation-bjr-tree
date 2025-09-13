@@ -90,7 +90,7 @@ void print(string address, vector<string> data){
 }
 
 int main(){
-    string version = "medium";
+    string version = "large";
 
     cout << "The program started..." << endl;
     vector<int> info;
@@ -128,7 +128,7 @@ int main(){
     my_tree->total_points = values.size();
     my_tree->lazy = false;
     my_tree->ND_use = false;
-    my_tree->depth = 7;
+    my_tree->depth = 10;
 
     if (my_tree->ND_use) {
         int* ND_cache = new int[values.size()];
@@ -141,77 +141,78 @@ int main(){
 
     stringstream ss("");
     string temp;
+    vector<vector<int>> injections(time_steps);
+    vector<vector<int>> ejections(time_steps);
 
-    for(int time = 0 ; time<time_steps ; time++){
-        cout << "time: " << time  << endl;
-        id = 0;
-        for(int t=0 ; t<times.size() ; t++){
-            range = times[t];
-            ss.clear();
-            ss.str(range);
+    vector<Node*> all_nodes(values.size());
+    for (int i = 0; i < values.size(); i++) {
+        all_nodes[i] = new Node();
+        all_nodes[i]->point.id = i;
+        all_nodes[i]->point.dim = dim;
+        all_nodes[i]->point.values = new int[dim];
+        
+        stringstream ss(values[i]);
+        string temp;
+        for (int j = 0; j < dim; j++) {
             ss >> temp;
-            start = stoi(temp);
-            ss >> temp;
-            end = stoi(temp);
+            all_nodes[i]->point.values[j] = stoi(temp);
+        }
+    }
 
-            if(time >= start && time < end){
-                if(my_tree->does_point_exist(id)){
-                    id++;
-                    continue;
-                } else{
-                    coordinates = values[id];
-                    ss.clear();
-                    ss.str(coordinates);
+    for (int id = 0; id < times.size(); id++) {
+        stringstream ss(times[id]);
+        int start, end;
+        ss >> start >> end;
+        
+        for (int time = start; time < min(end, time_steps); time++) {
+            injections[time].push_back(id);
+        }
+        if (end < time_steps) {
+            ejections[end].push_back(id);
+        }
+    }
 
-                    Point point(id, dim);
-                    for (int i = 0; i < dim; i++) {
-                        ss >> temp;
-                        point.values[i] = stoi(temp);
-                    }
-
-                    Node* newNode = new Node();
-                    newNode->point = point;
-                    
-                    if(my_tree->lazy){
-                        my_tree->lazy_inject(root, newNode);
-                    } else{
-                        my_tree->inject(root, newNode);
-                       
-                    }
-                    my_tree->add_to_exists(newNode);
-                }
-            } else{
-                if (time < start) break;
-                if ((time >= end || time < start) && my_tree->does_point_exist(id)) {
-                    Point deleting_point;
-                    Node* deleting_node = new Node();
-                    deleting_point.id = id;
-                    deleting_node->point = deleting_point;
-                    my_tree->eject(deleting_node);
-                    delete deleting_node;
-                }
-            }
-            id++;
+    for(int time=0 ; time<time_steps ; time++){
+        if (time % 1000 == 0) {
+            cout << "Processing time: " << time << "/" << time_steps << endl;
         }
 
-        Node** skylinePoints = my_tree->root->get_children();
-        int len = my_tree->root->children_size();
-        vector<Node*> skyline_vec(skylinePoints, skylinePoints + len);
-        quick_sort(skyline_vec, 0, skyline_vec.size() - 1);
-        string skyline_str = "";
-        for (int i = 0; i < skyline_vec.size(); i++) {
-            if(i==0){
-                skyline_str += "" + to_string(skyline_vec[i]->point.id);
-            } else{
-                skyline_str += " " + to_string(skyline_vec[i]->point.id);
+        for (int id : injections[time]) {
+            if(!my_tree->does_point_exist(id)) {
+                if (my_tree->lazy) {
+                    my_tree->lazy_inject(root, all_nodes[id]);
+                } else {
+                    my_tree->inject(root, all_nodes[id]);
+                }
+                my_tree->add_to_exists(all_nodes[id]);
             }
+        }
+        
+        // Process ejections
+        for (int id : ejections[time]) {
+            if(my_tree->does_point_exist(id)) {
+                my_tree->eject(all_nodes[id]);
+            }
+        }
 
-            //nd
-            if(my_tree->ND_use)
-                my_tree->ND_cache[i] = time;
+        int skyline_size = root->children_size();
+        vector<Node*> skyline_vec;
+        skyline_vec.reserve(skyline_size);
+        
+        Node* current = root->head_child;
+        while (current != nullptr) {
+            skyline_vec.push_back(current);
+            current = current->next;
+        }
+        
+        quick_sort(skyline_vec, 0, skyline_vec.size() - 1);
+        
+        string skyline_str;
+        for (int i = 0; i < skyline_vec.size(); i++) {
+            if(i > 0) skyline_str += " ";
+            skyline_str += to_string(skyline_vec[i]->point.id);
         }
         skyline[time] = skyline_str;
-
     }
 
     ifstream ref;
@@ -236,7 +237,7 @@ int main(){
     }
 
     float error_rate = float(errors)/float(skyline.size())*100;
-    printf("Error rate: %.f%%\n", floor(error_rate));
+    printf("Error rate: %.f%%\n", error_rate);
     cout << "program finished" << endl;
 
     auto end_time = chrono::high_resolution_clock::now();
