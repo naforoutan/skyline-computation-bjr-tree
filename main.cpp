@@ -188,7 +188,6 @@ int main(){
             }
         }
         
-        // Process ejections
         for (int id : ejections[time]) {
             if(my_tree->does_point_exist(id)) {
                 my_tree->eject(all_nodes[id]);
