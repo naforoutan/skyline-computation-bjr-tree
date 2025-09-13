@@ -39,15 +39,17 @@ mkdir -p dataset/small dataset/medium dataset/large
 # Add downloaded dataset files to appropriate folders
 # Then build and run
 make
-./skyline_computation --dataset medium --lazy true
+# Should configure then run main.cpp
 ```
 
-## Supported Datasets
-Dataset |	Points |	Dimensions	| Timesteps
---- | --- | --- | ---
-Small |	1,000	| 4	| 100
-Medium |50,000 | 5 | 	10,998
-Large	| 800,000 |	7 |	40,998
+## Configuration Options
+Setting	| Values |	Description
+|----|----|----|
+version	|"small", "medium", "large"	| Choose dataset size
+use_lazy| 	true, false	| Enable/disable lazy evaluation
+use_nd_cache |	true, false	| Enable/disable ND-cache optimization
+
+
 
 🎓 Academic Project
 Developed for Data Structures course (Spring 2025). Implements BJR-Tree algorithms for dynamic skyline computation.
