@@ -1,6 +1,6 @@
 # Dynamic Skyline Computation with BJR-Tree
 
-A high-performance C++ implementation of dynamic skyline computation using the BJR-Tree data structure. Efficiently processes multi-dimensional datasets with continuous insertions and deletions over time.
+A Data Structures project implementing BJR-Tree for dynamic skyline computation, processing multi-dimensional datasets with continuous point insertions and deletions to maintain optimal skyline results over time. The main program is compiled from ```main.cpp``` while the core BJR-Tree structure is implemented in ```modules.hpp```.
 
 ## 📥 Dataset Download
 The dataset is not included in this repository. Download it from:
