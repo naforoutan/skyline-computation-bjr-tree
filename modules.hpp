@@ -18,7 +18,6 @@ struct Point {
         delete[] values; 
     }
 
-    // Remove copy operations for performance
     Point(const Point&) = delete;
     Point& operator=(const Point&) = delete;
 };
